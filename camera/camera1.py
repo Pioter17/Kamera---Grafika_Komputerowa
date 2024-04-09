@@ -41,6 +41,11 @@ Mroz = [[np.cos(np.pi/12), -np.sin(np.pi/12), 0, 0],
         [0, 0, 1, 0],
         [0, 0, 0, 1]]
 
+Msk = [[1.5, 0, 0, 0],
+       [0, 1.5, 0, 0],
+       [0, 0, 1, 0],
+       [0, 0, 0, 1]]
+
 def find_new_points(p1, p2):
     (x1, y1, z1) = p1
     (x2, y2, z2) = p2
@@ -193,6 +198,31 @@ def rotate(left):
     win.fill((255, 255, 255))
     draw_all()
 
+def zoom(more):
+    for i in range(len(Cubes)):
+        cube = Cubes[i]
+        new_cube = []
+        for point in cube:
+            z = point[2]
+            point[2] = 1
+            point.append(1)
+            if more:
+                new_point = np.matmul(Msk, point)
+                new_point = new_point.tolist()
+                new_point.pop()
+                new_point[2] = z
+            else:
+                matrix = np.array(Msk)
+                inverse_matrix = np.linalg.inv(matrix)
+                new_point = np.matmul(inverse_matrix, point)
+                new_point = new_point.tolist()
+                new_point.pop()
+                new_point[2] = z
+            new_cube.append(new_point)
+        Cubes[i] = new_cube
+    win.fill((255, 255, 255))
+    draw_all()
+
 
 while True:
     draw_all()
@@ -229,3 +259,7 @@ while True:
                     rotate(True)
                 case pygame.K_e:
                     rotate(False)
+                case pygame.K_z:
+                    zoom(True)
+                case pygame.K_x:
+                    zoom(False)
