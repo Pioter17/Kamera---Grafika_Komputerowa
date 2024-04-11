@@ -239,27 +239,27 @@ while True:
                     go_horizontally(True)
                 case pygame.K_d:
                     go_horizontally(False)
-                case pygame.K_w:
-                    go_vertically(True)
-                case pygame.K_s:
-                    go_vertically(False)
-                case pygame.K_r:
-                    go(True)
-                case pygame.K_f:
-                    go(False)
-                case pygame.K_UP:
-                    rotate_horizontally(True)
-                case pygame.K_DOWN:
-                    rotate_horizontally(False)
-                case pygame.K_LEFT:
-                    rotate_vertically(True)
-                case pygame.K_RIGHT:
-                    rotate_vertically(False)
                 case pygame.K_q:
-                    rotate(True)
-                case pygame.K_e:
-                    rotate(False)
+                    go_vertically(True)
                 case pygame.K_z:
-                    zoom(True)
+                    go_vertically(False)
+                case pygame.K_w:
+                    go(True)
+                case pygame.K_s:
+                    go(False)
+                case pygame.K_r:
+                    rotate_horizontally(True)
+                case pygame.K_f:
+                    rotate_horizontally(False)
                 case pygame.K_x:
+                    rotate_vertically(True)
+                case pygame.K_c:
+                    rotate_vertically(False)
+                case pygame.K_v:
+                    rotate(True)
+                case pygame.K_b:
+                    rotate(False)
+                case pygame.K_t:
+                    zoom(True)
+                case pygame.K_g:
                     zoom(False)
