@@ -30,7 +30,8 @@ nR8 = [[0, 0, 0] for i in range(8)]
 
 nCubes = [Rectangle1, Rectangle2, Rectangle3, Rectangle4, Rectangle5, Rectangle6, Rectangle7, Rectangle8]
 Lanes = [[1, 2], [2, 4], [1, 3], [3, 4], [1, 5], [2, 6], [3, 7], [4, 8], [5, 6], [5, 7], [6, 8], [7, 8]]
-Cubes = [Rectangle1, Rectangle2, Rectangle3, Rectangle4, Rectangle5, Rectangle6, Rectangle7, Rectangle8]
+Cubes = [Rectangle1, Rectangle5]
+Walls = [[1, 2, 3, 4], [5, 6, 7, 8], [1, 2, 5, 6], [3, 4, 7, 8], [1, 3, 5, 7], [2, 4, 6, 8]]
 
 pygame.display.flip()
 d = 200
@@ -57,6 +58,72 @@ Msk = [[1.5, 0, 0, 0],
        [0, 0, 0, 1]]
 
 
+def calculate_plane_equation(point1, point2, point3):
+    # Obliczamy wektory różnicowe
+    v1 = (point2[0] - point1[0], point2[1] - point1[1], point2[2] - point1[2])
+    v2 = (point3[0] - point1[0], point3[1] - point1[1], point3[2] - point1[2])
+    # Obliczamy iloczyn wektorowy
+    N = np.cross(v1, v2)
+    # Współczynniki normalne płaszczyzny
+    A, B, C = N
+    # Obliczamy wartość D
+    D = -(A * point1[0] + B * point1[1] + C * point1[2])
+    return A, B, C, D
+
+
+def calculate_intersection_point(plane_eq, point1, point2):
+    # Ekstrahujemy współczynniki równania płaszczyzny
+    (A, B, C, D) = plane_eq
+
+    # Obliczamy wektor kierunkowy prostej
+    vx = point2[0] - point1[0]
+    vy = point2[1] - point1[1]
+    vz = point2[2] - point1[2]
+
+    # Sprawdzamy, czy prosta jest równoległa do płaszczyzny
+    denominator = A * vx + B * vy + C * vz
+    if denominator == 0:
+        # Prosta jest równoległa do płaszczyzny, więc nie ma punktu przecięcia
+        return None
+
+    # Obliczamy t dla równania parametrycznego prostej
+    t = (-D - A * point1[0] - B * point1[1] - C * point1[2]) / denominator
+
+    # Obliczamy współrzędne punktu przecięcia
+    intersection_point = (point1[0] + t * vx, point1[1] + t * vy, point1[2] + t * vz)
+
+    return intersection_point
+
+
+def checkHide(p1, p2, z1, z2):
+    x1 = p1[0]
+    y1 = p1[1]
+    x2 = p2[0]
+    y2 = p2[1]
+    point1 = [x1, y1, z1]
+    point2 = [x2, y2, z2]
+
+    for i in range(2):
+        rect = Cubes[i]
+        for j in range(len(Walls)):
+            wall = Walls[j]
+            A, B, C, D = calculate_plane_equation(rect[wall[0]], rect[wall[1]], rect[wall[2]])
+            cross_point = calculate_intersection_point((A, B, C, D), point1, point2)
+            if cross_point is None:
+                return (0, 0, 0, 0)
+            vec1 = np.array(point1) - np.array(cross_point)
+            vec2 = np.array(point2) - np.array(cross_point)
+            # Obliczamy iloczyn skalarny
+            dot_product = np.dot(vec1, vec2)
+            # Sprawdzamy orientację punktów
+            if dot_product > 0:
+                return (0, 0, 0, 0)
+                # return "Oba punkty leżą po tej samej stronie punktu przecięcia."
+            elif dot_product < 0:
+                return x1, y1, x2, y2
+                # return "Punkty leżą po przeciwnych stronach punktu przecięcia."
+
+
 def find_new_points(p1, p2):
     (x1, y1, z1) = p1
     (x2, y2, z2) = p2
@@ -76,10 +143,13 @@ def calculate_cord(point):
 
 
 def calculate(rect, rect2, z1, z2):
-    x1 = 350 + rect[0] * d / (z1)
-    y1 = 350 - rect[1] * d / (z1)
-    x2 = 350 + rect2[0] * d / (z2)
-    y2 = 350 - rect2[1] * d / (z2)
+    (x1, y1, x2, y2) = checkHide(rect, rect2, z1, z2)
+    if x1 == 0 and y1 == 0 and x2 == 0 and y2 == 0:
+        return (0, 0), (0, 0)
+    x1 = 350 + x1 * d / (z1)
+    y1 = 350 - y1 * d / (z1)
+    x2 = 350 + x2 * d / (z2)
+    y2 = 350 - y2 * d / (z2)
     return (x1, y1), (x2, y2)
 
 
@@ -98,6 +168,8 @@ def draw_all():
             if z1 <= 0 or z2 <= 0:
                 continue
             ((x1, y1), (x2, y2)) = calculate(rect, rect2, z1, z2)
+            if x1 == 0 and y1 == 0 and x2 == 0 and y2 == 0:
+                continue
             pygame.draw.line(win, (255,0,0), (x1, y1), (x2, y2), 2)
             pygame.display.flip()
 
