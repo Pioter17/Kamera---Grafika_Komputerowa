@@ -9,13 +9,9 @@ d = 200
 step = 20
 
 class Plane:
-    def __init__(self, polygon):
-        # Współrzędne trzech punktów definiujących płaszczyznę
-        # self.v1 = v1
-        # self.v2 = v2
-        # self.v3 = v3
-        # self.v4 = v4
+    def __init__(self, polygon, color):
         self.polygon = polygon
+        self.color = color
 
 
 class BSPTree:
@@ -26,23 +22,19 @@ class BSPTree:
         self.polygons = [] # Lista przechowująca wielokąty płaszczyzny (ściany)
 
     def build(self, polygons):
-        if not polygons or len(polygons) == 0 or len(polygons[0]) < 3:
+        if not polygons:# or len(polygons) == 0 or len(polygons[0]) < 3:
             return
         # Wybierz pierwszy wielokąt jako podziałową płaszczyznę
         dividing_polygon = polygons[0]
-        # if len(dividing_polygon) < 4:
-        #     self.plane = Plane(dividing_polygon[0], dividing_polygon[1], dividing_polygon[2])
-        # else:
-        # self.plane = Plane(dividing_polygon[0], dividing_polygon[1], dividing_polygon[2], dividing_polygon[3])
-        self.plane = Plane(dividing_polygon)
+        self.plane = Plane(dividing_polygon, dividing_polygon[0][3])
         front_polygons = []
         back_polygons = []
         # Podziel pozostałe wielokąty względem podziałowej płaszczyzny
         for polygon in polygons[1:]:
             front_points, back_points = self.split_polygon(polygon)
-            if front_points:
+            if len(front_points) >= 3:
                 front_polygons.append(front_points)
-            if back_points:
+            if len(back_points) >= 3:
                 back_polygons.append(back_points)
         # Rekurencyjnie buduj poddrzewa BSPTree dla przedniej i tylnej części
         if front_polygons:
@@ -56,39 +48,27 @@ class BSPTree:
         front_points = []
         back_points = []
         # Sprawdź, po której stronie podziałowej płaszczyzny znajdują się wierzchołki wielokąta
-        for point in polygon:
-            if self.side_of_plane(point) == "FRONT":
-                front_points.append(point)
-            elif self.side_of_plane(point) == "BACK":
-                back_points.append(point)
-            else:
-                front_points.append(point)
-                back_points.append(point)
-        # Sprawdź, czy wielokąt przecina podziałową płaszczyznę
-        # for i in range(len(polygon)):
-        #     v1 = polygon[i]
-        #     v2 = polygon[(i+1)%len(polygon)]
-        #     if self.side_of_plane(v1) != self.side_of_plane(v2):
-        #         # Oblicz punkt przecięcia krawędzi z podziałową płaszczyzną
-        #         intersection_point = self.compute_intersection(v1, v2)
-        #         front_points.append(intersection_point)
-        #         back_points.append(intersection_point)
-        # print(front_points, back_points)
+        # for point in polygon:
+        point = polygon[0]
+        if self.side_of_plane(point) == "FRONT":
+            for p in polygon:
+                front_points.append(p)
+        elif self.side_of_plane(point) == "BACK":
+            for p in polygon:
+                back_points.append(p)
+        else:
+            for p in polygon:
+                front_points.append(p)
+                back_points.append(p)
         return front_points, back_points
 
     def side_of_plane(self, point):
-        # v1 = [point[0]-self.plane.v1[0], point[1]-self.plane.v1[1], point[2] - self.plane.v1[2]]
-        # u1 = [self.plane.v1[0] - self.plane.v2[0], self.plane.v1[1]-self.plane.v2[1], self.plane.v1[2] - self.plane.v2[2]]
-        # u2 = [self.plane.v3[0] - self.plane.v2[0], self.plane.v3[1]-self.plane.v2[1], self.plane.v3[2] - self.plane.v2[2]]
         u1 = [self.plane.polygon[0][0] - self.plane.polygon[1][0], self.plane.polygon[0][1]-self.plane.polygon[1][1], self.plane.polygon[0][2] - self.plane.polygon[1][2]]
         u2 = [self.plane.polygon[2][0] - self.plane.polygon[1][0], self.plane.polygon[2][1]-self.plane.polygon[1][1], self.plane.polygon[2][2] - self.plane.polygon[1][2]]
         normal = np.cross(u1, u2)
-        # m = -np.dot(normal, self.plane.v2)
-        m = -np.dot(normal, self.plane.polygon[1])
-        x = np.dot(normal, point) + m
+        m = -np.dot(normal, [self.plane.polygon[1][0], self.plane.polygon[1][1], self.plane.polygon[1][2]])
+        x = np.dot(normal, [point[0], point[1], point[2]]) + m
         # Sprawdź, po której stronie podziałowej płaszczyzny znajduje się punkt
-        # x = (point[0] - self.plane.v1[0]) * (self.plane.v2[1] - self.plane.v1[1]) - \
-        #     (point[1] - self.plane.v1[1]) * (self.plane.v2[0] - self.plane.v1[0])
         if x > 0:
             return "FRONT"
         elif x < 0:
@@ -96,58 +76,53 @@ class BSPTree:
         else:
             return "COPLANAR"
 
-    # def compute_intersection(self, v1, v2):
-    #     # Oblicz punkt przecięcia krawędzi z podziałową płaszczyzną
-    #     divisor = (v2[0] - v1[0]) * (self.plane.v1[1] - self.plane.v2[1]) - \
-    #               (v2[1] - v1[1]) * (self.plane.v1[0] - self.plane.v2[0])
-    #     if divisor == 0:
-    #         return None  # Krawędź jest równoległa do płaszczyzny
-    #     t = ((self.plane.v1[0] - v1[0]) * (self.plane.v1[0] - self.plane.v2[0]) + \
-    #          (self.plane.v1[1] - v1[1]) * (self.plane.v1[1] - self.plane.v2[1])) / divisor
-    #     x = v1[0] + t * (v2[0] - v1[0])
-    #     y = v1[1] + t * (v2[1] - v1[1])
-    #     z = v1[2] + t * (v2[2] - v1[2])
-    #     return (x, y, z)
+    def user_side_of_plane(self):
+        u1 = [self.plane.polygon[0][0] - self.plane.polygon[1][0],
+              self.plane.polygon[0][1] - self.plane.polygon[1][1],
+              self.plane.polygon[0][2] - self.plane.polygon[1][2]]
+        u2 = [self.plane.polygon[2][0] - self.plane.polygon[1][0],
+              self.plane.polygon[2][1] - self.plane.polygon[1][1],
+              self.plane.polygon[2][2] - self.plane.polygon[1][2]]
+        normal = np.cross(u1, u2)
+        x = -np.dot(normal, [self.plane.polygon[1][0], self.plane.polygon[1][1], self.plane.polygon[1][2]])
+        # x = np.dot(normal, [0, 0, 0]) + m
+        # Sprawdź, po której stronie podziałowej płaszczyzny znajduje się punkt
+        if x > 0:
+            return "FRONT"
+        elif x < 0:
+            return "BACK"
+        else:
+            return "COPLANAR"
 
     def draw(self):
-        if self.front or self.back:
-            if self.side_of_plane((0, 0, 0)) == "FRONT":
-                if self.back:
-                    self.back.draw()
-                if self.front:
-                    self.front.draw()
-            elif self.side_of_plane((0, 0, 0)) == "BACK":
-                if self.front:
-                    self.front.draw()
-                if self.back:
-                    self.back.draw()
-            else:
-                if self.front:
-                    self.front.draw()
-                if self.back:
-                    self.back.draw()
-        if self.plane:
-            # if self.plane.v1[2] <= 0 or self.plane.v2[2] <= 0 or self.plane.v3[2] <= 0:
-            #     return
+        sortedP = traverse(self)
+        for plane in sortedP:
             points = []
-            for point in self.plane.polygon:
-                if point[2] == 0:
+            for point in plane:
+                if point[2] <= 0:
                     return
                 p = (350 + point[0]*d / point[2], 350 - point[1]*d / point[2])
                 points.append(p)
-            # p1 = (350 + self.plane.v1[0]*d / self.plane.v1[2], 350 - self.plane.v1[1]*d / self.plane.v1[2])
-            # p2 = (350 + self.plane.v2[0]*d / self.plane.v2[2], 350 - self.plane.v2[1]*d / self.plane.v2[2])
-            # p3 = (350 + self.plane.v3[0]*d / self.plane.v3[2], 350 - self.plane.v3[1]*d / self.plane.v3[2])
-            # if self.plane.v4[2] == 0:
-            #     pygame.draw.polygon(win, (0, 255, 0), [p1, p2, p3])
-            # else:
-            # p4 = (350 + self.plane.v4[0]*d / self.plane.v4[2], 350 + self.plane.v4[1]*d / self.plane.v4[2])
-            pygame.draw.polygon(win, (0, 255, 0), points)
+            if plane[0][3] == "red":
+                pygame.draw.polygon(win, (255, 0, 0), points)
+            else:
+                pygame.draw.polygon(win, (0, 0, 255), points)
+
+
+def traverse(node):
+    if node is None:
+        return []
+    if node.side_of_plane((0, 0, 0)) == "FRONT":
+        return traverse(node.back) + [node.plane.polygon] + traverse(node.front)
+    elif node.side_of_plane((0, 0, 0)) == "BACK":
+        return traverse(node.front) + [node.plane.polygon] + traverse(node.back)
+    else:
+        return traverse(node.front) + traverse(node.back)
 
 # Współrzędne wierzchołków sześcianów
 # cube1_vertices = [[100, 100, 400], [200, 100, 400], [100, 200, 400], [200, 200, 400], [100, 100, 500], [200, 100, 500], [100, 200, 500], [200, 200, 500]]
-cube2_vertices = [[100, 100, 200], [200, 100, 200], [100, 200, 200], [200, 200, 200], [100, 100, 300], [200, 100, 300], [100, 200, 300], [200, 200, 300]]
-cube1_vertices = [[-100, 100, 200], [-200, 100, 200], [-100, 200, 200], [-200, 200, 200], [-100, 100, 300], [-200, 100, 300], [-100, 200, 300], [-200, 200, 300]]
+cube2_vertices = [[100, 100, 200, "red"], [200, 100, 200, "red"], [100, 200, 200, "red"], [200, 200, 200, "red"], [100, 100, 300, "red"], [200, 100, 300, "red"], [100, 200, 300, "red"], [200, 200, 300, "red"]]
+cube1_vertices = [[-100, 100, 200, "blue"], [-200, 100, 200, "blue"], [-100, 200, 200, "blue"], [-200, 200, 200, "blue"], [-100, 100, 300, "blue"], [-200, 100, 300, "blue"], [-100, 200, 300, "blue"], [-200, 200, 300, "blue"]]
 # cube2_vertices = [[100, -100, 300], [200, -100, 300], [100, -200, 300], [200, -200, 300], [100, -100, 400], [200, -100, 400], [100, -200, 400], [200, -200, 400]]
 
 # Wierzchołki tworzące ściany sześcianów
@@ -169,7 +144,7 @@ cube2_faces = [
     [cube2_vertices[1], cube2_vertices[3], cube2_vertices[7], cube2_vertices[5]]
 ]
 
-faces = [[0, 1, 2, 3], [4, 5, 6, 7], [0, 1, 5, 4], [2, 3, 7, 6], [0, 2, 6, 4], [1, 3, 7, 5]]
+faces = [[0, 2, 3, 1], [4, 6, 7, 5], [0, 1, 5, 4], [2, 3, 7, 6], [0, 2, 6, 4], [1, 3, 7, 5]]
 
 Lanes = [[1, 2], [2, 4], [1, 3], [3, 4], [1, 5], [2, 6], [3, 7], [4, 8], [5, 6], [5, 7], [6, 8], [7, 8]]
 Cubes = [cube1_vertices, cube2_vertices]
@@ -224,6 +199,7 @@ def go_horizontally(is_left):
     for i in range(len(Cubes)):
         cube = Cubes[i]
         new_cube = []
+        color = cube[0][3]
         for point in cube:
             if is_left:
                 x = point[0] + step
@@ -231,7 +207,7 @@ def go_horizontally(is_left):
                 x = point[0] - step
             y = point[1]
             z = point[2]
-            new_cube.append([x, y, z])
+            new_cube.append([x, y, z, color])
         Cubes[i] = new_cube
     win.fill((255, 255, 255))
     runBsp()
@@ -241,6 +217,7 @@ def go_vertically(is_up):
     for i in range(len(Cubes)):
         cube = Cubes[i]
         new_cube = []
+        color = cube[0][3]
         for point in cube:
             if is_up:
                 y = point[1] - step
@@ -248,7 +225,7 @@ def go_vertically(is_up):
                 y = point[1] + step
             x = point[0]
             z = point[2]
-            new_cube.append([x, y, z])
+            new_cube.append([x, y, z, color])
         Cubes[i] = new_cube
     win.fill((255, 255, 255))
     runBsp()
@@ -258,6 +235,7 @@ def go(forward):
     for i in range(len(Cubes)):
         cube = Cubes[i]
         new_cube = []
+        color = cube[0][3]
         for point in cube:
             if forward:
                 z = point[2] - step
@@ -265,7 +243,7 @@ def go(forward):
                 z = point[2] + step
             x = point[0]
             y = point[1]
-            new_cube.append([x, y, z])
+            new_cube.append([x, y, z, color])
         Cubes[i] = new_cube
     win.fill((255, 255, 255))
     runBsp()
@@ -275,18 +253,19 @@ def rotate_horizontally(up):
     for i in range(len(Cubes)):
         cube = Cubes[i]
         new_cube = []
+        color = cube[0][3]
         for point in cube:
-            point.append(1)
+            point[3] = 1
             if up:
                 new_point1 = np.matmul(Mrox, point)
                 new_point1 = new_point1.tolist()
-                new_point1.pop()
+                new_point1[3] = color
             else:
                 matrix = np.array(Mrox)
                 inverse_matrix = np.linalg.inv(matrix)
                 new_point1 = np.matmul(inverse_matrix, point)
                 new_point1 = new_point1.tolist()
-                new_point1.pop()
+                new_point1[3] = color
             new_cube.append(new_point1)
         Cubes[i] = new_cube
     win.fill((255, 255, 255))
@@ -297,18 +276,19 @@ def rotate_vertically(left):
     for i in range(len(Cubes)):
         cube = Cubes[i]
         new_cube = []
+        color = cube[0][3]
         for point in cube:
-            point.append(1)
+            point[3] = 1
             if left:
                 new_point = np.matmul(Mroy, point)
                 new_point = new_point.tolist()
-                new_point.pop()
+                new_point[3] = color
             else:
                 matrix = np.array(Mroy)
                 inverse_matrix = np.linalg.inv(matrix)
                 new_point = np.matmul(inverse_matrix, point)
                 new_point = new_point.tolist()
-                new_point.pop()
+                new_point[3] = color
             new_cube.append(new_point)
         Cubes[i] = new_cube
     win.fill((255, 255, 255))
@@ -336,6 +316,7 @@ def rotate(left):
     win.fill((255, 255, 255))
     runBsp()
 
+
 def zoom(more):
     for i in range(len(Cubes)):
         cube = Cubes[i]
@@ -360,16 +341,6 @@ def zoom(more):
         Cubes[i] = new_cube
     win.fill((255, 255, 255))
     runBsp()
-
-
-for i in range(len(Cubes)):
-    cube = Cubes[i]
-    new_cube = []
-    new_normalized_cube = []
-    for point in cube:
-        x = point[0]
-        y = point[1]
-        z = point[2]
 
 
 while True:
